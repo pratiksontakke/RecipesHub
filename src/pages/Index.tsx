@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { HeroSection } from '@/components/home/HeroSection';
-import { SearchFilterBlock } from '@/components/home/SearchFilterBlock';
 import { FeaturedRecipes } from '@/components/home/FeaturedRecipes';
 import { LatestRecipes } from '@/components/home/LatestRecipes';
 import { TrendingCategories } from '@/components/home/TrendingCategories';
@@ -14,7 +13,6 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <HeroSection />
-      <SearchFilterBlock />
       <FeaturedRecipes />
       <LatestRecipes />
       <TrendingCategories />

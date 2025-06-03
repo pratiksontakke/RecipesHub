@@ -14,7 +14,7 @@ import { IngredientsForm } from './IngredientsForm';
 import { StepsForm } from './StepsForm';
 import { MediaUpload } from './MediaUpload';
 import { CollaborationSection } from './CollaborationSection';
-import { Save, Upload, X } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 
 interface RecipeFormProps {
   mode: 'create' | 'edit';
@@ -40,10 +40,8 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
   const [tags, setTags] = useState<string[]>(initialData?.recipe?.tags || []);
   const [newTag, setNewTag] = useState('');
   const [featuredImage, setFeaturedImage] = useState(initialData?.recipe?.featured_image_url || '');
-  const [isPublic, setIsPublic] = useState(initialData?.recipe?.is_public ?? true);
   const [ingredients, setIngredients] = useState(initialData?.ingredients || []);
   const [steps, setSteps] = useState(initialData?.steps || []);
-  const [isDraft, setIsDraft] = useState(false);
 
   const createRecipe = useMutation({
     mutationFn: async (data: any) => {
@@ -66,7 +64,7 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
           difficulty: data.difficulty,
           tags: data.tags,
           featured_image_url: data.featuredImage,
-          is_public: data.isPublic && !data.isDraft,
+          is_public: true, // Always public now
         }])
         .select()
         .single();
@@ -123,11 +121,10 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
           difficulty: data.difficulty,
           tags: data.tags,
           featured_image_url: data.featuredImage,
-          is_public: data.isPublic && !data.isDraft,
+          is_public: true, // Always public now
           updated_at: new Date().toISOString(),
         })
         .eq('id', initialData?.recipe?.id)
-        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -231,7 +228,7 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleSubmit = (asDraft = false) => {
+  const handleSubmit = () => {
     if (!title.trim()) {
       toast({
         title: "Error",
@@ -259,8 +256,6 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
       difficulty: difficulty || null,
       tags,
       featuredImage,
-      isPublic,
-      isDraft: asDraft,
     };
 
     console.log('Submitting recipe:', data);
@@ -271,6 +266,14 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
       updateRecipe.mutate(data);
     }
   };
+
+  // Get original curator info for edit mode
+  const originalCurator = mode === 'edit' && initialData?.recipe ? {
+    name: initialData.recipe.profiles?.full_name,
+    email: initialData.recipe.profiles?.email
+  } : undefined;
+
+  const isOwner = mode === 'edit' ? initialData?.recipe?.user_id === user?.id : true;
 
   return (
     <div className="space-y-6">
@@ -436,42 +439,20 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
         </CardContent>
       </Card>
 
-      {/* Collaboration Section - NEW */}
-      <CollaborationSection />
-
-      {/* Privacy Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Privacy Settings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isPublic"
-              checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
-              className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-            />
-            <label htmlFor="isPublic" className="text-sm text-gray-700">
-              Make this recipe public (others can view and search for it)
-            </label>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Collaboration Section - Show for edit mode only */}
+      {mode === 'edit' && initialData?.recipe && (
+        <CollaborationSection 
+          recipeId={initialData.recipe.id}
+          isOwner={isOwner}
+          recipeTitle={title}
+          originalCurator={originalCurator}
+        />
+      )}
 
       {/* Action Buttons */}
       <div className="flex gap-4 pb-8">
         <Button
-          onClick={() => handleSubmit(true)}
-          variant="outline"
-          disabled={createRecipe.isPending || updateRecipe.isPending}
-        >
-          <Save className="mr-2 h-4 w-4" />
-          Save as Draft
-        </Button>
-        <Button
-          onClick={() => handleSubmit(false)}
+          onClick={handleSubmit}
           disabled={createRecipe.isPending || updateRecipe.isPending}
           className="bg-orange-600 hover:bg-orange-700"
         >

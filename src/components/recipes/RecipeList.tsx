@@ -25,14 +25,16 @@ export const RecipeList = () => {
 
       if (recipesError) throw recipesError;
 
-      // Query recipes that the user collaborates on
+      // Query recipes that the user collaborates on (including drafts)
       const { data: collaboratedRecipes, error: collabError } = await supabase
         .from('recipe_collaborators')
         .select(`
           recipe_id,
+          status,
           recipes!inner(*)
         `)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('status', 'accepted'); // Only include accepted collaborations
 
       if (collabError) throw collabError;
 

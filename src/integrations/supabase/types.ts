@@ -82,27 +82,40 @@ export type Database = {
           id: string
           invited_at: string | null
           invited_by: string
+          invited_email: string | null
           recipe_id: string
           role: string
+          status: string
           user_id: string
         }
         Insert: {
           id?: string
           invited_at?: string | null
           invited_by: string
+          invited_email?: string | null
           recipe_id: string
           role?: string
+          status?: string
           user_id: string
         }
         Update: {
           id?: string
           invited_at?: string | null
           invited_by?: string
+          invited_email?: string | null
           recipe_id?: string
           role?: string
+          status?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_recipe_collaborators_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recipe_collaborators_recipe_id_fkey"
             columns: ["recipe_id"]
@@ -199,23 +212,27 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_recipes_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      can_edit_recipe: {
-        Args: { recipe_uuid: string; user_uuid: string }
-        Returns: boolean
-      }
-      is_recipe_collaborator: {
-        Args: { recipe_uuid: string; user_uuid: string }
-        Returns: boolean
+      get_current_user_role_for_recipe: {
+        Args: { recipe_uuid: string }
+        Returns: string
       }
       is_recipe_owner: {
-        Args: { recipe_uuid: string; user_uuid: string }
+        Args: { recipe_uuid: string }
         Returns: boolean
       }
     }

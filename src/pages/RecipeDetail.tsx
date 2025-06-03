@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Clock, Users, ChefHat, Edit, Trash2, ArrowLeft, Check } from 'lucide-react';
+import { Clock, Users, ChefHat, Edit, Trash2, ArrowLeft, Check, Crown } from 'lucide-react';
 import { IngredientsList } from '@/components/recipes/IngredientsList';
 import { RecipeSteps } from '@/components/recipes/RecipeSteps';
 import { RecipeTimer } from '@/components/recipes/RecipeTimer';
 import { CelebrationAnimation } from '@/components/recipes/CelebrationAnimation';
+import { CollaborationSection } from '@/components/recipes/CollaborationSection';
 import { useToast } from '@/hooks/use-toast';
 
 const RecipeDetail = () => {
@@ -30,7 +31,10 @@ const RecipeDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recipes')
-        .select('*')
+        .select(`
+          *,
+          profiles(full_name, email)
+        `)
         .eq('id', id)
         .single();
 
@@ -68,6 +72,25 @@ const RecipeDetail = () => {
       return data;
     },
     enabled: !!id,
+  });
+
+  // Check if user has collaboration access
+  const { data: collaborationStatus } = useQuery({
+    queryKey: ['collaboration-status', id, user?.id],
+    queryFn: async () => {
+      if (!user?.id || !id) return null;
+      
+      const { data, error } = await supabase
+        .from('recipe_collaborators')
+        .select('role, status')
+        .eq('recipe_id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: !!user?.id && !!id,
   });
 
   const deleteRecipe = useMutation({
@@ -156,8 +179,16 @@ const RecipeDetail = () => {
   }
 
   const isOwner = user?.id === recipe.user_id;
+  const isCollaborator = collaborationStatus?.status === 'accepted';
+  const canEdit = isOwner || (isCollaborator && collaborationStatus?.role === 'editor');
   const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
   const scalingFactor = servings / recipe.servings;
+
+  // Original curator information - check if profiles exists and has the required properties
+  const originalCurator = recipe.profiles && typeof recipe.profiles === 'object' && !('error' in recipe.profiles) ? {
+    name: recipe.profiles.full_name || undefined,
+    email: recipe.profiles.email
+  } : undefined;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -178,6 +209,34 @@ const RecipeDetail = () => {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
+
+        {/* Original Curator Credit - Show if not owner */}
+        {!isOwner && originalCurator && (
+          <Card className="border-orange-200 bg-orange-50 mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Crown className="h-4 w-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-800">
+                  Original Recipe by: {originalCurator.name || originalCurator.email}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Collaboration Status Badge for Collaborators */}
+        {isCollaborator && (
+          <Card className="border-blue-200 bg-blue-50 mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">
+                  You are a {collaborationStatus?.role} on this recipe
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Header */}
         <div className="mb-8">
@@ -201,7 +260,7 @@ const RecipeDetail = () => {
               )}
             </div>
 
-            {isOwner && (
+            {canEdit && (
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -210,15 +269,17 @@ const RecipeDetail = () => {
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleDelete}
-                  disabled={deleteRecipe.isPending}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
+                {isOwner && (
+                  <Button
+                    variant="outline"
+                    onClick={handleDelete}
+                    disabled={deleteRecipe.isPending}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -279,7 +340,7 @@ const RecipeDetail = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Ingredients */}
           <Card>
             <CardContent className="p-6">
@@ -359,6 +420,16 @@ const RecipeDetail = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Collaboration Section - Show for authenticated users */}
+        {user && (
+          <CollaborationSection 
+            recipeId={id!}
+            isOwner={isOwner}
+            recipeTitle={recipe.title}
+            originalCurator={originalCurator}
+          />
+        )}
       </div>
     </div>
   );

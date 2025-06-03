@@ -1,7 +1,5 @@
 
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,64 +35,7 @@ const fallbackCreators = [
 ];
 
 export const TopCreators = () => {
-  const { data: creators, isLoading } = useQuery({
-    queryKey: ['top-creators'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('recipes')
-        .select('user_id, profiles(full_name, avatar_url)')
-        .eq('is_public', true);
-
-      if (error) {
-        console.log('No real creators data yet, using fallback');
-        return fallbackCreators;
-      }
-
-      // Group by user and count recipes
-      const userCounts = data.reduce((acc: any, recipe: any) => {
-        const userId = recipe.user_id;
-        if (!acc[userId]) {
-          acc[userId] = {
-            user_id: userId,
-            profile: recipe.profiles,
-            count: 0
-          };
-        }
-        acc[userId].count++;
-        return acc;
-      }, {});
-
-      // Convert to array and sort by count
-      const realCreators = Object.values(userCounts)
-        .sort((a: any, b: any) => b.count - a.count)
-        .slice(0, 5);
-
-      // If no real creators, return fallback data
-      return realCreators.length > 0 ? realCreators : fallbackCreators;
-    },
-  });
-
-  if (isLoading) {
-    return (
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center mb-8">
-            <ChefHat className="h-6 w-6 text-orange-600 mr-2" />
-            <h2 className="text-3xl font-bold text-gray-900">Top Home Chefs</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-                <div className="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const creators = fallbackCreators;
 
   return (
     <section className="py-16 bg-gray-50">
@@ -105,7 +46,7 @@ export const TopCreators = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          {creators?.map((creator: any) => (
+          {creators.map((creator: any) => (
             <Card key={creator.user_id} className="text-center hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <Avatar className="w-16 h-16 mx-auto mb-4">

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -17,7 +18,10 @@ const EditRecipe = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recipes')
-        .select('*')
+        .select(`
+          *,
+          profiles(full_name, email)
+        `)
         .eq('id', id)
         .single();
 
@@ -25,6 +29,25 @@ const EditRecipe = () => {
       return data;
     },
     enabled: !!id,
+  });
+
+  // Check if user has collaboration access
+  const { data: collaborationStatus } = useQuery({
+    queryKey: ['collaboration-status', id, user?.id],
+    queryFn: async () => {
+      if (!user?.id || !id) return null;
+      
+      const { data, error } = await supabase
+        .from('recipe_collaborators')
+        .select('role, status')
+        .eq('recipe_id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: !!user?.id && !!id,
   });
 
   const { data: ingredients } = useQuery({
@@ -95,12 +118,24 @@ const EditRecipe = () => {
     );
   }
 
-  if (recipe.user_id !== user.id) {
+  // Check if user is owner or accepted editor collaborator
+  const isOwner = recipe.user_id === user.id;
+  const isAcceptedEditor = collaborationStatus?.status === 'accepted' && collaborationStatus?.role === 'editor';
+  const canEdit = isOwner || isAcceptedEditor;
+
+  if (!canEdit) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access denied</h1>
-          <p className="text-gray-600 mb-4">You can only edit your own recipes</p>
+          <p className="text-gray-600 mb-4">
+            {collaborationStatus?.status === 'pending' 
+              ? 'Your collaboration invitation is still pending approval'
+              : collaborationStatus?.role === 'viewer'
+              ? 'You have viewer access only. Editor access is required to edit recipes'
+              : 'You can only edit recipes you own or have editor access to'
+            }
+          </p>
           <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
         </div>
       </div>
@@ -120,7 +155,9 @@ const EditRecipe = () => {
             Back
           </Button>
           <h1 className="text-3xl font-bold text-gray-900">Edit Recipe</h1>
-          <p className="text-gray-600 mt-2">Update your recipe details</p>
+          <p className="text-gray-600 mt-2">
+            {isOwner ? 'Update your recipe details' : 'Editing as collaborator'}
+          </p>
         </div>
         
         <RecipeForm 

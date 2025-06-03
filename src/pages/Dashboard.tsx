@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserOverviewCard } from '@/components/dashboard/UserOverviewCard';
 import { UserActivityStats } from '@/components/dashboard/UserActivityStats';
 import { MyRecipesSection } from '@/components/dashboard/MyRecipesSection';
-import { DraftsSection } from '@/components/dashboard/DraftsSection';
+import { CollaboratedRecipesSection } from '@/components/dashboard/CollaboratedRecipesSection';
 import { SettingsSection } from '@/components/dashboard/SettingsSection';
 
 const Dashboard = () => {
@@ -46,7 +46,7 @@ const Dashboard = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="recipes">My Recipes</TabsTrigger>
-              <TabsTrigger value="drafts">Drafts</TabsTrigger>
+              <TabsTrigger value="collaborated">Collaborated</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
             
@@ -54,8 +54,8 @@ const Dashboard = () => {
               <MyRecipesSection />
             </TabsContent>
             
-            <TabsContent value="drafts" className="mt-6">
-              <DraftsSection />
+            <TabsContent value="collaborated" className="mt-6">
+              <CollaboratedRecipesSection />
             </TabsContent>
             
             <TabsContent value="settings" className="mt-6">
