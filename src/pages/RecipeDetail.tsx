@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,10 +6,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Clock, Users, ChefHat, Edit, Trash2, ArrowLeft, Check } from 'lucide-react';
 import { IngredientsList } from '@/components/recipes/IngredientsList';
 import { RecipeSteps } from '@/components/recipes/RecipeSteps';
 import { RecipeTimer } from '@/components/recipes/RecipeTimer';
+import { CelebrationAnimation } from '@/components/recipes/CelebrationAnimation';
 import { useToast } from '@/hooks/use-toast';
 
 const RecipeDetail = () => {
@@ -21,6 +22,8 @@ const RecipeDetail = () => {
   const queryClient = useQueryClient();
   const [servings, setServings] = useState<number>(4);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [hasShownCelebration, setHasShownCelebration] = useState(false);
 
   const { data: recipe, isLoading } = useQuery({
     queryKey: ['recipe', id],
@@ -116,6 +119,23 @@ const RecipeDetail = () => {
     }
   };
 
+  // Check if cooking is complete and trigger celebration
+  const progressPercentage = steps ? (completedSteps.size / steps.length) * 100 : 0;
+  const isComplete = progressPercentage === 100 && steps && steps.length > 0;
+
+  useEffect(() => {
+    if (isComplete && !hasShownCelebration) {
+      setShowCelebration(true);
+      setHasShownCelebration(true);
+      
+      // Show success toast
+      toast({
+        title: "🎉 Recipe Complete!",
+        description: "Congratulations! You've finished cooking this recipe.",
+      });
+    }
+  }, [isComplete, hasShownCelebration, toast]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -138,10 +158,16 @@ const RecipeDetail = () => {
   const isOwner = user?.id === recipe.user_id;
   const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0);
   const scalingFactor = servings / recipe.servings;
-  const progressPercentage = steps ? (completedSteps.size / steps.length) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Celebration Animation */}
+      {showCelebration && (
+        <CelebrationAnimation 
+          onComplete={() => setShowCelebration(false)} 
+        />
+      )}
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <Button
@@ -227,7 +253,7 @@ const RecipeDetail = () => {
             </div>
           )}
 
-          {/* Progress Bar for Cooking */}
+          {/* Enhanced Progress Bar for Cooking */}
           {steps && steps.length > 0 && (
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
@@ -236,12 +262,19 @@ const RecipeDetail = () => {
                   {completedSteps.size} of {steps.length} steps completed
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-orange-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
-                ></div>
-              </div>
+              <Progress 
+                value={progressPercentage} 
+                className={`h-3 transition-all duration-500 ${
+                  isComplete ? 'animate-pulse' : ''
+                }`}
+              />
+              {isComplete && (
+                <div className="text-center mt-2">
+                  <span className="text-sm font-medium text-green-600 animate-pulse">
+                    🎉 Recipe Complete! Well done! 🎉
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { IngredientsForm } from './IngredientsForm';
 import { StepsForm } from './StepsForm';
 import { MediaUpload } from './MediaUpload';
+import { CollaborationSection } from './CollaborationSection';
 import { Save, Upload, X } from 'lucide-react';
 
 interface RecipeFormProps {
@@ -127,7 +127,7 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
           updated_at: new Date().toISOString(),
         })
         .eq('id', initialData?.recipe?.id)
-        .eq('user_id', user.id) // Ensure user owns the recipe
+        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -166,7 +166,6 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
   });
 
   const saveIngredientsAndSteps = async (recipeId: string) => {
-    // Filter and validate ingredients before saving
     const validIngredients = ingredients.filter(ingredient => 
       ingredient.name.trim() && 
       ingredient.unit.trim() && 
@@ -180,7 +179,6 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
       order_index: index,
     }));
 
-    // Save ingredients only if there are valid ones
     if (validIngredients.length > 0) {
       const { error: ingredientsError } = await supabase
         .from('ingredients')
@@ -192,7 +190,6 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
       }
     }
 
-    // Filter and validate steps before saving
     const validSteps = steps.filter(step => 
       step.instruction.trim()
     ).map((step, index) => ({
@@ -204,7 +201,6 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
       video_url: step.video_url?.trim() || null,
     }));
 
-    // Save steps only if there are valid ones
     if (validSteps.length > 0) {
       const { error: stepsError } = await supabase
         .from('recipe_steps')
@@ -218,11 +214,9 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
   };
 
   const updateIngredientsAndSteps = async (recipeId: string) => {
-    // Delete existing ingredients and steps
     await supabase.from('ingredients').delete().eq('recipe_id', recipeId);
     await supabase.from('recipe_steps').delete().eq('recipe_id', recipeId);
     
-    // Save new ones
     await saveIngredientsAndSteps(recipeId);
   };
 
@@ -441,6 +435,9 @@ export const RecipeForm = ({ mode, initialData }: RecipeFormProps) => {
           />
         </CardContent>
       </Card>
+
+      {/* Collaboration Section - NEW */}
+      <CollaborationSection />
 
       {/* Privacy Settings */}
       <Card>
